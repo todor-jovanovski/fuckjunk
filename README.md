@@ -1,53 +1,69 @@
 # fuckjunk
 
-A zsh command that frees disk space by deleting regenerable dependency, build and cache directories across all your dev projects.
-It covers Node, Angular, Next.js, Nuxt, Turborepo, Vite, Expo, SvelteKit, Python, .NET, Gradle, Android, Flutter and CocoaPods.
-It supersedes `fuckbinobj`, which deleted every `bin` and `obj` directory regardless of what was inside.
+Free up disk space by deleting the dependency, build and cache folders your dev projects can regenerate.
+
+```console
+$ fuckjunk -n ~/projects
+  13421.2 MB  ./shop/frontend/.angular
+   2694.7 MB  ./dashboard/.turbo
+   1675.2 MB  ./chatbot/.venv
+    916.1 MB  ./landing/node_modules
+  ...
+
+Total: 44.21 GB in 233 dirs
+```
 
 ## Install
 
-Add to `~/.zshrc`:
+Needs zsh and git.
 
 ```zsh
-source ~/projects/personal/fuckjunk/fuckjunk.zsh
+git clone https://github.com/todor-jovanovski/fuckjunk.git ~/.fuckjunk
+echo 'source ~/.fuckjunk/fuckjunk.zsh' >> ~/.zshrc
+source ~/.zshrc
 ```
 
 ## Usage
 
 ```zsh
-fuckjunk -n            # dry run: list what would be deleted, with sizes and a total
-fuckjunk               # list, then ask before deleting
-fuckjunk -y ~/projects # delete without asking
+fuckjunk -n   # preview what would be deleted, biggest first
+fuckjunk      # show the same list, then ask before deleting
+fuckjunk -y   # delete without asking
 ```
 
-The directory defaults to the current one.
+It cleans the current folder, or the one you pass: `fuckjunk -n ~/projects`.
+Always preview first.
 
-## What gets deleted
+## What it deletes
 
-| Rule | Names | Deleted when |
-|---|---|---|
-| always | `node_modules` `.angular` `.next` `.nuxt` `.turbo` `.svelte-kit` `.parcel-cache` `.vite` `.expo` `__pycache__` `.pytest_cache` `.mypy_cache` `.ruff_cache` `.tox` `.gradle` `.cxx` `.dart_tool` | always |
-| venv | `.venv` `venv` | it contains `pyvenv.cfg` |
-| dotnet | `bin` `obj` | it sits next to a `*.csproj`, `*.fsproj`, `*.vbproj` or `*.sqlproj` |
-| ignored | `dist` `build` `out` `target` `coverage` `Pods` | git ignores it |
+| Stack | Folders |
+|---|---|
+| JavaScript | `node_modules` `.next` `.nuxt` `.angular` `.turbo` `.vite` `.svelte-kit` `.parcel-cache` `.expo` |
+| Python | `.venv` `venv` `__pycache__` `.pytest_cache` `.mypy_cache` `.ruff_cache` `.tox` |
+| .NET | `bin` `obj` |
+| Android and Flutter | `.gradle` `.cxx` `.dart_tool` |
+| Build output and iOS | `dist` `build` `out` `target` `coverage` `Pods` |
 
-Rules live in `_FUCKJUNK_RULES` at the top of `fuckjunk.zsh`.
+## What it won't touch
 
-## Safety
+A folder is only deleted when it is clearly regenerable:
 
-- A directory that contains git-tracked files is never deleted, whatever its name.
-- Generic names are only deleted when git ignores them, so a committed `build` or `dist` is safe, and so is anything outside a git repo.
-- A `bin` without a .NET project next to it (`node_modules/.bin`, `.venv/bin`, a scripts folder) is left alone.
-- Matched directories are not searched further, and `.git` directories are skipped.
+- `.venv` and `venv` only if they are real virtual environments (they contain `pyvenv.cfg`).
+- `bin` and `obj` only next to a .NET project file (`.csproj`, `.fsproj`, `.vbproj`, `.sqlproj`).
+- `dist`, `build`, `out`, `target`, `coverage` and `Pods` only if git ignores them.
+- Never a folder that contains files committed to git.
 
-## Before you run it
+## Before and after
 
-- Stop dev servers and watchers running from the projects you are cleaning.
-- A virtual environment without a `requirements.txt`, `pyproject.toml` or lockfile is the only record of its packages.
-  Freeze it first with `pip freeze > requirements-frozen.txt`.
-- Afterwards, reinstall before working on a project again (`npm i`, `pnpm i`, `uv sync`, `dotnet restore`).
+- Stop dev servers running from the folders you are cleaning.
+- If a Python venv has no `requirements.txt`, `pyproject.toml` or lockfile, save its packages first: `.venv/bin/pip freeze > requirements.txt`.
+- Afterwards, reinstall before working on a project again: `npm i`, `pnpm i`, `uv sync`, `dotnet restore` and so on.
 
-## Tests
+## Customize
+
+Add or change folder names in `_FUCKJUNK_RULES` at the top of `fuckjunk.zsh`.
+
+## Test
 
 ```zsh
 zsh test/fuckjunk.test.zsh
